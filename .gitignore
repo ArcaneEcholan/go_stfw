@@ -1,6 +1,9 @@
 ### Custom
+.idea
 
 build
+
+**/*/build/*
 
 ### C++ template
 # Prerequisites

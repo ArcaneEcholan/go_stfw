@@ -30,6 +30,9 @@ You can get all you need about QT lib from ubuntu release.
 ```shell
 sudo apt update
 sudo apt install qt5-default qtcreator qtbase5-dev qttools5-dev qttools5-dev-tools qt5-qmake qtbase5-dev libqt5x11extras5-dev -y
+
+# if on jammy(22.04), use this
+sudo apt install -y qtcreator qtbase5-dev qt5-qmake  qttools5-dev qttools5-dev-tools libqt5x11extras5-dev
 ```
 
 **QHotkey**

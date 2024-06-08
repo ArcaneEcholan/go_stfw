@@ -166,16 +166,18 @@
     <message>
         <location filename="main.ui" line="14"/>
         <location filename="build/go_stfw_autogen/include/ui_main.h" line="50"/>
+        <location filename="cmake-build-debug/go_stfw_autogen/include/ui_main.h" line="50"/>
+        <location filename="cmake-build-debug/wx_markdown_autogen/include/ui_main.h" line="50"/>
         <source>MainWindow</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="main.cpp" line="23"/>
+        <location filename="main.cpp" line="152"/>
         <source>Search</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="main.cpp" line="24"/>
+        <location filename="main.cpp" line="152"/>
         <source>Enter search query:</source>
         <translation type="unfinished"></translation>
     </message>

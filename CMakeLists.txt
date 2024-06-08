@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(go_stfw LANGUAGES CXX)
+project(wx_markdown LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -32,22 +32,22 @@ find_package(Qt5 REQUIRED COMPONENTS Widgets LinguistTools X11Extras )
 set(CMAKE_PREFIX_PATH "/usr/local/lib/cmake/QHotkey" ${CMAKE_PREFIX_PATH})
 find_package(QHotkey REQUIRED)
 
-set(TS_FILES go_stfw_en_US.ts)
+set(TS_FILES wx_markdown_en_US.ts)
 
 if(ANDROID)
-  add_library(go_stfw SHARED
+  add_library(wx_markdown SHARED
     main.cpp
           main.ui
     ${TS_FILES}
   )
 else()
-  add_executable(go_stfw
+  add_executable(wx_markdown
     main.cpp
           main.ui
     ${TS_FILES}
   )
 endif()
 
-target_link_libraries(go_stfw PRIVATE Qt5::Widgets Qt5::X11Extras qhotkey)
+target_link_libraries(wx_markdown PRIVATE Qt5::Widgets Qt5::X11Extras qhotkey)
 
 qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})

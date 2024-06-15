@@ -8,7 +8,7 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # QtCreator supports the following variables for Android, which are identical to qmake Android variables.
@@ -27,8 +27,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #find_package(Qt5 COMPONENTS Widgets LinguistTools X11Extras REQUIRED)
 #find_package(QHotkey REQUIRED)
 
-
-find_package(Qt5 REQUIRED COMPONENTS Widgets LinguistTools X11Extras )
+#WebEngineWidgets can be installed by qtwebengine5-dev
+find_package(Qt5 REQUIRED COMPONENTS Widgets LinguistTools X11Extras WebEngineWidgets )
 set(CMAKE_PREFIX_PATH "/usr/local/lib/cmake/QHotkey" ${CMAKE_PREFIX_PATH})
 find_package(QHotkey REQUIRED)
 
@@ -36,18 +36,19 @@ set(TS_FILES wx_markdown_en_US.ts)
 
 if(ANDROID)
   add_library(wx_markdown SHARED
-    main.cpp
+          main.cpp
           main.ui
-    ${TS_FILES}
+          ${TS_FILES}
   )
 else()
   add_executable(wx_markdown
-    main.cpp
+          main.cpp
           main.ui
-    ${TS_FILES}
+          ${TS_FILES}
   )
 endif()
 
-target_link_libraries(wx_markdown PRIVATE Qt5::Widgets Qt5::X11Extras qhotkey)
+target_include_directories(wx_markdown PRIVATE /home/chaowen/projects/cmark/build/include)
+target_link_libraries(wx_markdown PRIVATE Qt5::Widgets Qt5::X11Extras Qt5::WebEngineWidgets qhotkey /home/chaowen/projects/cmark/build/lib/libcmark.a)
 
 qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})

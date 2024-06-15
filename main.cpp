@@ -52,6 +52,9 @@ public:
         QString("Created: %1, Modified: %2").arg(created).arg(modified));
   }
 
+
+
+
   QSize sizeHint(const QStyleOptionViewItem &option,
                  const QModelIndex &index) const override {
     // Provide a size hint for each item
@@ -85,7 +88,7 @@ class MainWindow : public QMainWindow {
 public:
   MainWindow(QWidget *parent = nullptr)
       : QMainWindow(parent), listView(new QListView(this)),
-        model(new QStandardItemModel(this)) {
+        model(new QStandardItemModel(this)), webView(new QWebEngineView(this)) {
     setWindowTitle("WX Markdown");
     // ui.setupUi(this);
     //// Set up the global shortcut
@@ -104,16 +107,21 @@ public:
 
     // Configure the QListView
     listView->setModel(model);
-    listView->setItemDelegate(new DocumentDelegate(this)); // Set the custom delegate
+    listView->setItemDelegate(
+        new DocumentDelegate(this)); // Set the custom delegate
 
     // Disable item editing
     listView->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     // Add the QListView to the layout
-    layout->addWidget(listView);
+    layout->addWidget(listView, 1);
+    layout->addWidget(webView, 2);
 
     // Set the central widget for the main window
     setCentralWidget(centralWidget);
+
+    connect(listView->selectionModel(), &QItemSelectionModel::selectionChanged,
+            this, &MainWindow::onDocumentSelected);
 
     // Populate the list with document data
     populateList();
@@ -122,8 +130,21 @@ public:
 private:
   QListView *listView;       // Pointer to the QListView
   QStandardItemModel *model; // Model to hold the document data
+  QWebEngineView *webView;
 
   QListWidget *listWidget; // Pointer to the QListWidget
+
+  void onDocumentSelected(const QItemSelection &selected) {
+    //if (selected.indexes().isEmpty()) return;
+    //
+    //QModelIndex index = selected.indexes().first();
+    //QString documentName = model->data(index.siblingAtColumn(0)).toString();
+    // Convert the document name to HTML and display it
+    // For simplicity, we'll just display the document name in HTML
+    QString htmlContent = "<h1>helloworld</h1>";
+    webView->setHtml(htmlContent);
+    std::cout << "jfkals" <<std::endl;
+  }
 
   void showInputDialog() {
     bool ok;

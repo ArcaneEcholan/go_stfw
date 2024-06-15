@@ -1,15 +1,46 @@
+<!--This file is for html feature exploring.-->
+
 <html>
 <body>
-<button id="test">test</button>
+<div id="container">
+    <div id="scroller">
+        <p>
+            Far out in the uncharted backwaters of the unfashionable end of the
+            western spiral arm of the Galaxy lies a small unregarded yellow sun.
+            Orbiting this at a distance of roughly ninety-two million miles is an
+            utterly insignificant little blue green planet whose ape-descended life
+            forms are so amazingly primitive that they still think digital watches are
+            a pretty neat idea.
+        </p>
+    </div>
+</div>
+
+<div id="output">scrollTop: 0</div>
+
+<style>
+    #scroller {
+        overflow: scroll;
+        height: 150px;
+        width: 150px;
+        border: 5px dashed orange;
+    }
+
+    #output {
+        padding: 1rem 0;
+    }
+
+    p{
+        margin: 0;
+    }
+</style>
 <script>
     window.onload =()=> {
-        debugger
+        const scroller = document.querySelector("#scroller");
+        const output = document.querySelector("#output");
 
-        console.log("window loaded");
-        let btn = document.getElementById("test")
-        btn.style.backgroundColor = "red";
-
-        console.log("btn red");
+        scroller.addEventListener("scroll", (event) => {
+            output.textContent = `scrollTop: ${scroller.scrollTop}`;
+        });
     }
 </script>
 </body>

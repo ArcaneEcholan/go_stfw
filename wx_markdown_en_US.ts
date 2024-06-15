@@ -171,16 +171,6 @@
         <source>MainWindow</source>
         <translation type="unfinished"></translation>
     </message>
-    <message>
-        <location filename="main.cpp" line="152"/>
-        <source>Search</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="main.cpp" line="152"/>
-        <source>Enter search query:</source>
-        <translation type="unfinished"></translation>
-    </message>
 </context>
 <context>
     <name>QHotkey</name>

@@ -1,201 +1,109 @@
-#include "ui_main.h"
 #include <QApplication>
-#include <QDesktopServices>
-#include <QHotkey>
-#include <QInputDialog>
-#include <QListView>
-#include <QListWidget>
 #include <QMainWindow>
-#include <QStandardItemModel>
-#include <QUrl>
-#include <QVBoxLayout> // For layout management
+#include <QTextEdit>
 #include <QWebEngineView>
+#include <QSplitter>
+#include <QScrollBar>
+#include <QVBoxLayout>
+#include <QTimer>
+#include <cmark.h>
 
-#include <QDateTime>
-#include <QString>
-
-#include <QPainter>
-#include <QStyledItemDelegate>
-
-#include "filesystem"
-#include "iostream"
-int count =  0;
-class DocumentDelegate : public QStyledItemDelegate {
-  Q_OBJECT
-
-public:
-  DocumentDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) {}
-
-  void paint(QPainter *painter, const QStyleOptionViewItem &option,
-             const QModelIndex &index) const override {
-    // Retrieve the document data
-    QString name = index.model()->data(index.siblingAtColumn(0)).toString();
-    QString created = index.model()->data(index.siblingAtColumn(1)).toString();
-    QString modified = index.model()->data(index.siblingAtColumn(2)).toString();
-
-    // Draw the background
-    painter->save();
-    painter->setClipRect(option.rect);
-    painter->fillRect(option.rect, option.state & QStyle::State_Selected
-                                       ? option.palette.highlight()
-                                       : option.palette.base());
-    painter->restore();
-
-    // Draw the document name
-    QRect nameRect = option.rect.adjusted(5, 5, -5, -option.rect.height() / 2);
-    painter->drawText(nameRect, Qt::AlignLeft | Qt::AlignVCenter, name);
-
-    // Draw the creation and modification times
-    QRect timeRect = option.rect.adjusted(5, option.rect.height() / 2, -5, -5);
-    painter->drawText(
-        timeRect, Qt::AlignLeft | Qt::AlignVCenter,
-        QString("Created: %1, Modified: %2").arg(created).arg(modified));
-  }
-
-
-
-
-  QSize sizeHint(const QStyleOptionViewItem &option,
-                 const QModelIndex &index) const override {
-    // Provide a size hint for each item
-    //return QSize(option.rect.width(), 100);
-    std::cout << option.rect.height() << std::endl;
-    std::cout << count ++ << std::endl;
-
-    return QSize(option.rect.width(), 40);
-  }
-};
-
-class Document {
-public:
-  Document(const QString &name, const QDateTime &created,
-           const QDateTime &modified)
-      : name(name), created(created), modified(modified) {}
-
-  QString getName() const { return name; }
-  QDateTime getCreated() const { return created; }
-  QDateTime getModified() const { return modified; }
-
-private:
-  QString name;
-  QDateTime created;
-  QDateTime modified;
-};
+#include <iostream>
 
 class MainWindow : public QMainWindow {
   Q_OBJECT
 
 public:
-  MainWindow(QWidget *parent = nullptr)
-      : QMainWindow(parent), listView(new QListView(this)),
-        model(new QStandardItemModel(this)), webView(new QWebEngineView(this)) {
-    setWindowTitle("WX Markdown");
-    // ui.setupUi(this);
-    //// Set up the global shortcut
-    // QHotkey* shortcut = new QHotkey(QKeySequence("Alt+Q"), true, this); //
-    // 'true' enables the hotkey connect(shortcut, &QHotkey::activated, this,
-    // &MainWindow::showInputDialog);
+  MainWindow(QWidget *parent = nullptr) : QMainWindow(parent), debounceTimer(new QTimer(this)) {
+    setWindowTitle("WX Markdown Editor");
 
-    // Set the central widget and layout
+    // Create a central widget
     QWidget *centralWidget = new QWidget(this);
-    QVBoxLayout *layout = new QVBoxLayout(centralWidget);
-
-    QFont font = listView->font();
-    //font.setFamily("Courier New"); // A monospaced font that clearly displays underscores
-    font.setPointSize(10); // Adjust size as needed, if don't, the underscore in the file's name will not be displayed
-    listView->setFont(font);
-
-    // Configure the QListView
-    listView->setModel(model);
-    listView->setItemDelegate(
-        new DocumentDelegate(this)); // Set the custom delegate
-
-    // Disable item editing
-    listView->setEditTriggers(QAbstractItemView::NoEditTriggers);
-
-    // Add the QListView to the layout
-    layout->addWidget(listView, 1);
-    layout->addWidget(webView, 2);
-
-    // Set the central widget for the main window
     setCentralWidget(centralWidget);
 
-    connect(listView->selectionModel(), &QItemSelectionModel::selectionChanged,
-            this, &MainWindow::onDocumentSelected);
+    // Create a vertical layout for the central widget
+    QVBoxLayout *layout = new QVBoxLayout(centralWidget);
 
-    // Populate the list with document data
-    populateList();
+    // Create a splitter to hold the text editor and the web view
+    QSplitter *splitter = new QSplitter(Qt::Horizontal, this);
+
+    // Create a text editor (input editor) on the left
+    QTextEdit *textEditor = new QTextEdit(this);
+    textEditor->setPlaceholderText("Enter Markdown or HTML text here...");
+
+    // Create a web view on the right
+    QWebEngineView *webView = new QWebEngineView(this);
+
+    // Add the text editor and the web view to the splitter
+    splitter->addWidget(textEditor);
+    splitter->addWidget(webView);
+
+    // Set the splitter as the main layout
+    layout->addWidget(splitter);
+
+    // Connect text editor changes to update the web view
+    connect(textEditor, &QTextEdit::textChanged, this, [textEditor, webView]() {
+      QString markdownContent = textEditor->toPlainText();
+      QByteArray markdownBytes = markdownContent.toUtf8();
+      const char *markdownText = markdownBytes.constData();
+
+      // Convert Markdown to HTML using cmark
+      cmark_node *doc = cmark_parse_document(markdownText, markdownBytes.size(), CMARK_OPT_DEFAULT);
+      char *html = cmark_render_html(doc, CMARK_OPT_DEFAULT);
+      cmark_node_free(doc);
+
+      QString htmlContent = QString::fromUtf8(html);
+      free(html);
+
+      // Set the converted HTML to the web view
+      webView->setHtml(htmlContent);
+    });
+
+    connect(textEditor->verticalScrollBar(), &QScrollBar::valueChanged, this, [this, textEditor, webView]() {
+      // Restart the debounce timer
+      if (!debounceTimer->isActive()) {
+        std::cout << "scroll event" << std::endl;
+        debounceTimer->start();
+      }
+    });
+
+    // Setup debounce timer
+    debounceTimer->setSingleShot(true);
+    debounceTimer->setInterval(100); // Adjust the interval for debouncing
+
+    // Connect text editor scroll changes to sync with the web view
+    connect(textEditor->verticalScrollBar(), &QScrollBar::valueChanged, this, [this]() {
+      // Restart the debounce timer
+      if (!debounceTimer->isActive()) {
+        std::cout << "scroll event" << std::endl;
+        debounceTimer->start();
+      }
+    });
+
+    // Connect the debounce timer's timeout signal to the function that updates the web view
+    connect(debounceTimer, &QTimer::timeout, this, [textEditor, webView]() {
+      std::cout << "scroll changed\n" << std::endl;
+      int scrollPosition = textEditor->verticalScrollBar()->value();
+      int maxScroll = textEditor->verticalScrollBar()->maximum();
+
+      // Calculate the scroll percentage
+      double scrollPercentage = static_cast<double>(scrollPosition) / maxScroll;
+
+      // Convert the scroll percentage to the web view's scroll position
+      QString jsCode = QString("window.scrollTo(0, (document.body.scrollHeight - document.body.clientHeight) * %1);")
+                           .arg(scrollPercentage);
+
+      // Execute JavaScript in the web view to scroll
+      webView->page()->runJavaScript(jsCode);
+    });
+
+    // Load some initial content into the web view
+    webView->setHtml("<h1>Welcome to WX Markdown Viewer</h1>");
   }
 
 private:
-  QListView *listView;       // Pointer to the QListView
-  QStandardItemModel *model; // Model to hold the document data
-  QWebEngineView *webView;
-
-  QListWidget *listWidget; // Pointer to the QListWidget
-
-  void onDocumentSelected(const QItemSelection &selected) {
-    //if (selected.indexes().isEmpty()) return;
-    //
-    //QModelIndex index = selected.indexes().first();
-    //QString documentName = model->data(index.siblingAtColumn(0)).toString();
-    // Convert the document name to HTML and display it
-    // For simplicity, we'll just display the document name in HTML
-    QString htmlContent = "<h1>helloworld</h1>";
-    webView->setHtml(htmlContent);
-    std::cout << "jfkals" <<std::endl;
-  }
-
-  void showInputDialog() {
-    bool ok;
-    QString text =
-        QInputDialog::getText(this, tr("Search"), tr("Enter search query:"),
-                              QLineEdit::Normal, "", &ok);
-    if (ok && !text.isEmpty()) {
-      QString url = "https://www.google.com/search?q=" + text;
-      QDesktopServices::openUrl(QUrl(url));
-    }
-  }
-
-  void populateList() {
-    QList<Document> documents{};
-    std::string path = "/home/chaowen/temp";
-    for (const auto &entry : std::filesystem::directory_iterator(path)) {
-      documents.append(
-          Document(QString::fromStdString(entry.path().filename().string()),
-                   QDateTime::currentDateTime().addDays(-2),
-                   QDateTime::currentDateTime().addDays(-1)));
-    }
-    //
-    //
-    //// List of documents to add
-    // QList<Document> documents = {
-    //     Document("Document 1", QDateTime::currentDateTime().addDays(-2),
-    //              QDateTime::currentDateTime().addDays(-1)),
-    //     Document("Document 2", QDateTime::currentDateTime().addDays(-5),
-    //              QDateTime::currentDateTime().addDays(-3)),
-    //     Document("Document 3", QDateTime::currentDateTime().addDays(-10),
-    //              QDateTime::currentDateTime())};
-
-    // Set the model columns
-    model->setHorizontalHeaderLabels({"Name", "Created", "Modified"});
-
-    // Add documents to the model
-    foreach (const Document &doc, documents) {
-      QList<QStandardItem *> items;
-      items.append(new QStandardItem(doc.getName()));
-      items.append(
-          new QStandardItem(doc.getCreated().toString("yyyy-MM-dd HH:mm:ss")));
-      items.append(
-          new QStandardItem(doc.getModified().toString("yyyy-MM-dd HH:mm:ss")));
-      model->appendRow(items);
-    }
-  }
-
-private:
-  Ui::MainWindow ui;
+  QTimer *debounceTimer; // Timer for debouncing
 };
-
 
 int main(int argc, char *argv[]) {
   QApplication app(argc, argv);

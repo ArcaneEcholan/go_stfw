@@ -6,6 +6,8 @@
 #include <QScrollBar>
 #include <QVBoxLayout>
 #include <QTimer>
+#include <QScreen>
+#include <QGuiApplication>
 #include <cmark.h>
 
 #include <iostream>
@@ -16,6 +18,16 @@ class MainWindow : public QMainWindow {
 public:
   MainWindow(QWidget *parent = nullptr) : QMainWindow(parent), debounceTimer(new QTimer(this)) {
     setWindowTitle("WX Markdown Editor");
+
+    // Set initial size of the main window
+    resize(1200, 800); // Width: 1200, Height: 800
+
+    // Center the window on the screen
+    QScreen *screen = QGuiApplication::primaryScreen();
+    QRect screenGeometry = screen->geometry();
+    int x = (screenGeometry.width() - width()) / 2;
+    int y = (screenGeometry.height() - height()) / 2;
+    setGeometry(x, y, width(), height());
 
     // Create a central widget
     QWidget *centralWidget = new QWidget(this);

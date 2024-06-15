@@ -38,6 +38,15 @@ public:
     splitter->addWidget(textEditor);
     splitter->addWidget(webView);
 
+    // Set the stretch factors to make them equally spaced
+    splitter->setStretchFactor(0, 1); // Text editor
+    splitter->setStretchFactor(1, 1); // Web view
+
+    // Set initial sizes (optional, to enforce starting with half-half)
+    QList<int> sizes;
+    sizes << width() / 2 << width() / 2; // Half-half
+    splitter->setSizes(sizes);
+
     // Set the splitter as the main layout
     layout->addWidget(splitter);
 

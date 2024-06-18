@@ -1,11 +1,20 @@
 #include <QApplication>
+#include <QClipboard>
+#include <QDir>
+#include <QFile>
+#include <QFileDialog>
 #include <QGuiApplication>
+#include <QImage>
+#include <QImageReader>
 #include <QMainWindow>
 #include <QMenuBar>
+#include <QMimeData>
 #include <QScreen>
 #include <QScrollBar>
+#include <QShortcut>
 #include <QSplitter>
 #include <QTextEdit>
+#include <QTextStream>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QWebEngineView>
@@ -74,14 +83,24 @@ public:
       // Convert Markdown to HTML using cmark
       cmark_node *doc = cmark_parse_document(markdownText, markdownBytes.size(),
                                              CMARK_OPT_DEFAULT);
+
       char *html = cmark_render_html(doc, CMARK_OPT_DEFAULT);
+      std::string s =  std::string("<html><head></head><body>") + html + "</body></html>";
+       //std::string s =   std::string("<html><head></head><body>") + html + "<script>window.onload =()=> { alert(`${window.location.host}`)};</script></body></html>";
+
       cmark_node_free(doc);
 
-      QString htmlContent = QString::fromUtf8(html);
+      QString htmlContent = QString::fromUtf8(s.c_str());
+      std::cout << "htmlContent: " << htmlContent.toStdString() << std::endl;
       free(html);
 
+      // Determine the base URL for the web view
+      // Must use QUrl object, not QString or other string.
+      QUrl baseUrl = QUrl::fromLocalFile(QFileInfo(currentFilePath).absolutePath() + "/");
+
+      std::cout << "qt webviewer baseurl: " << baseUrl.toDisplayString().toStdString() << std::endl;
       // Set the converted HTML to the web view
-      webView->setHtml(htmlContent);
+      webView->setHtml(htmlContent, baseUrl);
     });
 
     connect(textEditor->verticalScrollBar(), &QScrollBar::valueChanged, this,
@@ -130,6 +149,12 @@ public:
     webView->setHtml("<h1>Welcome to WX Markdown Viewer</h1>");
 
     createMenuBar();
+
+    // Create shortcut for Ctrl+Shift+V to paste image from clipboard
+    QShortcut *pasteImageShortcut =
+        new QShortcut(QKeySequence("Ctrl+Shift+V"), this);
+    connect(pasteImageShortcut, &QShortcut::activated, this,
+            &MainWindow::pasteImageFromClipboard);
   }
 
 private:
@@ -138,6 +163,14 @@ private:
   QString currentFilePath;
 
   QTextEdit *textEditor;
+
+  QString generateUniqueImagePath() {
+    QDir dir(QFileInfo(currentFilePath).absolutePath());
+    QString baseName = QFileInfo(currentFilePath).completeBaseName();
+    QString timestamp = QDateTime::currentDateTime().toString("yyyyMMddHHmmss");
+    QString imageName = QString("%1_image_%2.png").arg(baseName).arg(timestamp);
+    return dir.filePath(imageName);
+  }
 
   void createMenuBar() {
     QMenuBar *menuBar = new QMenuBar(this);
@@ -157,7 +190,40 @@ private:
   }
 
 private slots:
-   void openFile() {
+  void pasteImageFromClipboard() {
+    std::cout << "ctl+shift+v" << std::endl;
+    const QClipboard *clipboard = QApplication::clipboard();
+    const QMimeData *mimeData = clipboard->mimeData();
+
+    // the image data obtain process is learned from:
+    // https://stackoverflow.com/questions/46825795/how-to-get-clipboard-image-from-qclipboard-mimedata-in-c
+    if (mimeData->hasImage()) {
+      std::cout << "clipboard has image" << std::endl;
+      QImage image = clipboard->image();
+
+      // QImage image = qvariant_cast<QImage>(mimeData->imageData());
+      if (!image.isNull() && !currentFilePath.isEmpty()) {
+        // Generate a unique file name based on current time
+        QString imagePath = generateUniqueImagePath();
+
+        std::cout << "Image path: " << imagePath.toStdString() << std::endl;
+
+        // Save the image to the file
+        if (image.save(imagePath)) {
+          // Insert Markdown image link at the cursor position
+          QString imageMarkdown =
+              QString("![Image](%1)")
+                  .arg(QFileInfo(imagePath).absoluteFilePath());
+          textEditor->insertPlainText(imageMarkdown);
+        } else {
+          std::cerr << "Failed to save image to file: "
+                    << imagePath.toStdString() << std::endl;
+        }
+      }
+    }
+  }
+
+  void openFile() {
     QString filePath = QFileDialog::getOpenFileName(
         this, "Open File", "", "Text Files (*.txt *.md);;All Files (*)");
     if (!filePath.isEmpty()) {
